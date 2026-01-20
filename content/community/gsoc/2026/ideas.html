@@ -23,13 +23,15 @@ Getting started with the design early (before the application period ends) is
 recommended, to maximize your chances of being selected, and allow a larger part
 of the coding period dedicated to coding tasks.</p>
 
-<p>If you find one of the "big" ideas interesting, but feel that you cannot
+<p>If you find one of the "big"/"hard" ideas interesting, but feel that you cannot
 complete it within the allotted coding time, feel free to suggest splitting it
 into smaller parts for your proposal.</p>
 
+<!-- Not needed this year (was used for LibreOffice port and the like)
 <p>Students that intend to submit applications on ideas which are also part of
 other accepted mentoring organizations must coordinate with both Haiku and the
 other mentoring organization beforehand.</p>
+-->
 
 <h3>Project Areas</h3>
 
@@ -37,10 +39,10 @@ other mentoring organization beforehand.</p>
 <li><a href="#applications">Applications</a></li>
 <li><a href="#drivers">Drivers</a></li>
 <li><a href="#kernel">Kernel/File Systems</a></li>
-<li><a href="#media">Media</a></li>
+<!--<li><a href="#media">Media</a></li>-->
 <li><a href="#network">Network</a></li>
 <li><a href="#user-interface">User Interface</a></li>
-<li><a href="#ports">Porting</a></li>
+<!--<li><a href="#ports">Porting</a></li>-->
 <li><a href="#other">Other</a></li>
 </ul>
 
@@ -85,6 +87,8 @@ audio and video on websites such as Youtube.</p>
 <p>The current experimental code in WebKit uses the Game Kit and only some parts of the Media Kit,
 it has problems such as blocking the web browser while downloading the video, out of sync audio and
 video, and unability to seek inside a video.</p>
+<p>Other applications such as <a href="https://github.com/haikuarchives/streamradio">StreamRadio</a> show that it is possible to use the Media Kit with better
+buffering techniques to obtain a smoother experience.</p>
 
 <ul>
 <li>Project size: 175 hours with possible extensions for 350 hours (adding for example fullscreen video support, work on WebRTC, ...)</li>
@@ -99,14 +103,25 @@ video, and unability to seek inside a video.</p>
 
 <h5>Idea description</h5>
 
-<p>Haiku has a native WebKit port which uses the WebKit1 API. This port is not complete and there are several bugs and minor problems which need to be fixed.
-The plan is to replace this with a more up to date port based on the WebKit2 API. Based on the work completed in GSoC 2024, WebKit2 on Haiku is now able to render web pages.
-The goal of this project is to continue this work, making the WebKit2 port more reliable, handle input events, etc, and make it usable for the WebPositive browser.</p>
+<p>Haiku has a native WebKit port which uses the "WebKit1" legacy API to interface with WebKit.
+This API is now deprecated, and the browser should switch to "WebKit2", a new way to interface
+the browser and its engine. This new system does not run the entire web browser inside a single
+process, instead, the work is separated between a network process, a web process (doing the page
+rendering) and the browser itself (which is just a "shell" to render the pages on screen).</p>
+
+<p>Major progress was done during GSoC 2024 to get WebKit2 running on Haiku. This results in a
+minimal functional browser that can render web pages and process user inputs (mouse and keyboard).
+However, it is very unstable (many page will trigger assertion failures in WebKit code), and also
+has glitches and performance issues (scrolling webpages or resizing the browser window results in
+flickering).</p>
+
+<p>The goal of this project is to stabilize WebKit2 and fix the remaining problems, making it usable for the WebPositive browser that ships with Haiku.</p>
 
 <h5>Why we need this</h5>
 
 <p>The web browser is an important part of the operating system today. It is difficult to attract and retain users if we don't provide a good web browser.
-When we started our efforts with WebKit, WebKit2 wasn't ready for our use yet, but today it is more mature and it is time to migrate to it.</p>
+The WebKitLegacy API is being deprecated by the developers of WebKit, with all new features (ad blockers, for example) only being available for WebKit2.
+Migration to the new API will provide a better path for the future of the WebPositive browser.</p>
 
 <h5>Further reading</h5>
 
@@ -115,7 +130,7 @@ When we started our efforts with WebKit, WebKit2 wasn't ready for our use yet, b
 <li>Possible mentors/knowledgeable people: PulkoMandy</li>
 <li>Project size: 175 or 350 hours, as there is always more things to do in WebKit</li>
 <li>Difficulty: medium</li>
-<li>Expected outcome: working version of WebPositive browser, able to load and render websites using WebKit2</li>
+<li>Expected outcome: stabilization of WebKit2, better web browsing experience with the MiniBrowser test application, more tests passing.</li>
 <li><a href="https://github.com/haiku/haikuwebkit/tree/haiku-webkit2">Sourcecode of WebKit2 work in progress</a></li>
 <li><a href="https://www.haiku-os.org/blog/zardshard">GSoC 2024 blog</a></li>
 <li><a href="https://dev.haiku-os.org/query?status=assigned&status=in-progress&status=new&status=reopened&component=%5EApplications%2FWebPositive">Opened tickets</a></li>
@@ -223,7 +238,7 @@ building the GUI itself.</p>
 
 <ul>
 	<li>Skill set: user interface, kernel and drivers interfacing (ioctl, devfs...)</li>
-	<li>Possible mentors: PulkoMandy, waddlesplash</li>
+	<li>Possible mentors: waddlesplash</li>
 	<li>Existing code: <a href="https://cgit.haiku-os.org/haiku/tree/src/apps/devices">"Devices"</a></li>
 	<li>Project size: 350 hours</li>
 	<li>Difficulty: easy/medium</li>
@@ -252,6 +267,60 @@ building the GUI itself.</p>
 <a id="drivers" name="drivers"></a>
 <h3>Drivers</h3>
 
+<h4><img src="/images/harddisk_32.png"/>eMMC storage support</h4>
+
+<p>eMMC is a standard for communicating with flash mass storage chips. It is used in cheap laptops
+where NVMe or SATA are too complex to implement, and sometimes in non-standard hardware like
+Chromebooks or ARM single board computers.</p>
+
+<p>Haiku currently cannot use these mass storage devices, which limits hardware compatibility.
+The basic layers (SDHC controller) are already in place, and can be used to access SD cards. eMMC
+needs a slightly different initialization sequence, and would also benefit from adding support for
+"advanced DMA" and other parts of the SDHC controller that allow for high speed operations.</p>
+
+<p>The interface for eMMC devices and for SDHC controllers is well documented and standardized.
+This means just one driver should be able to cover a lot of hardware. However, there may be some
+"quirks" (workaround for specific devices) depending on the hardware you will be testing with.</p>
+
+<ul>
+	<li>Requirements: <a href="https://www.qemu.org/docs/master/system/devices/emmc.html">Some testing can be done with QEMU</a>, so no specific hardware is needed.</li>
+	<li>Skill set: kernel and driver development, C and C++ development</li>
+	<li>Possible mentors: PulkoMandy</li>
+	<li>Project size: 175 hours for basic support, extensible for faster DMA usage</li>
+	<li>Difficulty: medium</li>
+	<li>Expected outcome: Haiku can read (and ideally also write) the user data area on eMMC devices.</li>
+</ul>
+
+<h4><img src="/images/App_Generic_32.png"/>
+FreeBSD compatibility layer for FDT attached network devices
+</h4>
+
+<p>Haiku relies on FreeBSD and OpenBSD drivers for most network devices. Currently, this support is
+limited to devices attached to the PCI bus, with <a href="https://review.haiku-os.org/c/haiku/+/9598">work in progress support to also allow usage of
+	USB network drivers</a>.</p>
+
+<p>On many ARM based devices, there is no PCI bus, instead the hardware is mapped at fixed addresses
+directly in the system-on-chip, and discovered through a <em>flattened device tree</em>, that is,
+a data structure describing what type of hardware is available and how to access it.</p>
+
+<p>Haiku already handles parsing of the FDT for its own drivers. However, the compatibility layer
+used for FreeBSD drivers is restricted to PCI and USB, and cannot currently be used for ARM machines
+relying on FDT. This is especially annoying as these machines tend to use a wide variety of
+implementations, which means a lot of drivers would benefit from this support.</p>
+
+<p>The goal of this project is to adjust the FreeBSD compatibility layer for at least one such
+driver.</p>
+
+<ul>
+	<li>Requirements: access to a device with an FDT mapped Ethernet interface, preferrably already supported by FreeBSD</li>
+	<li>Skill set: kernel and driver development, C and C++ development</li>
+	<li>Possible mentors: PulkoMandy</li>
+	<li>Project size: 175 hours for basic support, extensible for porting more drivers, finalization of USB compatibility layer support, or other tasks related to ARM support</li>
+	<li>Difficulty: medium</li>
+	<li>Expected outcome: Haiku can use an FDT network interface (tested for example by <a href="https://www.haiku-os.org/guides/network_booting">network booting</a>).</li>
+</ul>
+
+<!-- Needs clarification of *HCI support for isochronous transfers and study of the current state of the drivers and available test methods. Also, needs mentors.
 <h4><img src="/images/webcam.png"/>USB Webcam support</h4>
 
 <p>Haiku lacks support for WebCams following the UVC (USB Video Class) specification. There is an
@@ -263,7 +332,7 @@ WebCam driver and get webcams to work smoothly and reliably.</p>
 	<li>Skill set: kernel and driver development, USB, C and C++ development</li>
 	<li>Project size: 175 hours</li>
 	<li>Difficulty: medium</li>
-	<li>Possible mentors: PulkoMandy</li>
+	<li>Possible mentors: NO ONE</li>
 </ul>
 
 <h4><img src="/images/webcam.png"/>USB Audio 2.0 support</h4>
@@ -277,16 +346,17 @@ more USB Audio hardware.</p>
 	<li>Skill set: kernel and driver development, USB, C and C++ development</li>
 	<li>Project size: 175 hours</li>
 	<li>Difficulty: medium</li>
-	<li>Possible mentors: PulkoMandy</li>
+	<li>Possible mentors: NO ONE</li>
 </ul>
+-->
 
 <h4><img src="/images/harddisk_32.png"/>Universal Flash Storage support</h4>
 
-<p>Haiku lacks a driver to support the Universal Flash Storage Host Controller Interface (UFSHCI).
+<p>Haiku lacks a driver to support the <a href="https://www.jedec.org/standards-documents/docs/jesd223f">Universal Flash Storage Host Controller Interface (UFSHCI)</a>.
 The goal of this project is to add a driver between the PCIe UFSHCI device and the SCSI bus interface.</p>
 
 <ul>
-	<li>Requirements: Some testing can be done with QEMU</li>
+	<li>Requirements: <a href="https://github.com/qemu/qemu/blob/master/hw/ufs/ufs.c">Some testing can be done with QEMU</a></li>
 	<li>Skill set: kernel and driver development, C and C++ development</li>
 	<li>Project size: 175 hours</li>
 	<li>Difficulty: medium</li>
@@ -294,7 +364,7 @@ The goal of this project is to add a driver between the PCIe UFSHCI device and t
 </ul>
 
 
-<!-- Mentors wanted
+<!-- Mentors wanted, hardware support seems not so common?
 <h4><img src="/images/App_Generic_32.png"/>
 ACPI Video Extensions
 </h4>
@@ -356,6 +426,7 @@ Linux API compatibilty layer; more investigation is needed here.</p>
 <a id="kernel" name="kernel"></a>
 <h3>Kernel</h3>
 
+<!-- Needs mentors
 <h4><img src="/images/App_Generic_32.png"/>
 Power Management
 </h4>
@@ -372,6 +443,7 @@ Power Management
 	<li>Difficulty: hard</li>
 	<li>Expected outcome: improved power management in Haiku code (applications, drivers, ...) with benchmarks to measure the results (this may involve also developping the tools needed for benchmarking)</li>
 </ul>
+-->
 
 <h4><img src="/images/App_Generic_32.png"/>
 Improving the btrfs filesystem
@@ -498,6 +570,7 @@ Skill set: kernel development, x86 architecture/assembly language
 !-->
 
 
+<!-- To be reviewed after mass storage or ethernet drivers are available, as that's what holds up the ARM port currently
 <h4><img src="/images/App_Generic_32.png"/>ARM MMU support</h4>
 
 <p>The ARM ports of Haiku (for both 32 and 64 bit systems) are currently not bootable. The main issue appears to be missing or incorrect implementation of memory management.
@@ -513,6 +586,7 @@ Skill set: kernel development, ARM architecture/assembly
 	<li>Difficulty: easy</li>
 	<li>Expected outcome: the ARM port of Haiku is bootable on at least one reference hardware (or emulated hardware).</li>
 </ul>
+-->
 
 
 <!-- Mentors wanted
@@ -561,6 +635,7 @@ networking, etc).</p>
 	<li>Expected outcome: the Bluetooth stack can be used for more than just pairing devices. For example, bluetooth audio or bluetooth HID drivers can be used.</li>
 </ul>
 
+<!-- Mentors needed
 <h4><img src="/images/App_Generic_32.png"/>
 Integrate our PPP implementation
 </h4>
@@ -575,8 +650,9 @@ Implement CHAP authentication, and add support for configuring these to the new 
 	<li>Difficulty: easy</li>
 	<li>Expected outcome: it is possible to connect Haiku to a PPP modem</li>
 </ul>
+-->
 
-<!--
+<!-- Mentors needed, idea is incomplete
 
 <h4><img src="/images/App_Generic_32.png"/>
 Stream Control Transmission Protocol (SCTP)
@@ -587,12 +663,17 @@ Stream Control Transmission Protocol (SCTP)
 </ul>
 -->
 
+<!-- Needs mentors
 <h4><img src="/images/App_Generic_32.png"/>
-IPv6 finalization and stabilization
+IPv6 auto-configuration
 </h4>
 <p>
-The base framework for IPv6 support was implemented as a Google Summer of Code 2010 project.
-Even so, there remains a lot of smaller cleanup/finalization tasks that can be done as a project.
+Haiku has support for the IPv6 protocol that progressively replaces IPv4 for internet access.
+Currently, this support is lacking any auto-configuration and discovery (DHCPv6, SLAAC, ...).
+This means users who want to use Haiku with IPv6 need to manually configure an address for their
+machine. The goal of this project is to implement the missing parts in the Network server to handle
+auto-configuration of network interfaces and allow Haiku users to reach IPv6 websites and services
+without any specific configuration.
 </p>
 <ul>
 <li>Tickets to be investigated as part of this project (non-exhaustive list):
@@ -612,7 +693,9 @@ Even so, there remains a lot of smaller cleanup/finalization tasks that can be d
 	<li>Difficulty: easy</li>
 	<li>Expected outcome: IPv6 auto-configuration works, and it is possible to access website and other internet services over IPv6</li>
 </ul>
+-->
 
+<!-- Needs mentors
 <h4><img src="/images/App_Generic_32.png"/>MDNS / Bonjour / Avahi network discovery</h4>
 
 <h5>Idea description</h5>
@@ -627,11 +710,12 @@ Even so, there remains a lot of smaller cleanup/finalization tasks that can be d
 
 <ul>
 	<li>Skill set: network programming (UDP, IPv4, multicast)</li>
-	<li>Possible mentors: PulkoMandy</li>
+	<li>Possible mentors:</li>
 	<li>Project size: 175 hours (350 hours with extra goals such as UI integration, IPP printers support, etc)</li>
 	<li>Difficulty: medium</li>
 	<li>Expected outcome: proof of concept application listing MDNS machines and services as they are discovered. Other machines on the network can also see the Haiku machine as it advertises itself.</li>
 </ul>
+-->
 
 <a id="user-interface" name="user-interface"></a>
 <h3>User Interface</h3>
@@ -794,8 +878,10 @@ Part of this work would be to implement non-volatile storage that the Media Kit 
 -->
 
 
+<!--
 <a id="ports" name="ports"></a>
 <h3>Ports</h3>
+-->
 
 <!--
 
@@ -877,6 +963,7 @@ in new ways.</p>
 </ul>
 
 
+<!-- Needs mentors, scottmc only wants to be secondary mentor
 <h4><img src="/images/App_Generic_32.png"/>
 Add Haiku support to Allegro 5.0
 </h4>
@@ -893,7 +980,7 @@ port some other software using it.</p>
 	<li>Difficulty: easy</li>
 	<li>Expected outcome: Allegro 5 running on Haiku with all features</li>
 </ul>
-
+-->
 
 <!-- REMOVED: needs more thinking on Haiku side to decide on a plan for this.
 
@@ -942,13 +1029,13 @@ right to left text.</p>
 
 <ul>
 	<li>Skill set: C++</li>
-	<li>Possible mentors: stippi, PulkoMandy</li>
+	<li>Possible mentors: PulkoMandy</li>
 	<li>Project size: 175 hours</li>
 	<li>Difficulty: easy/medium</li>
 	<li>Expected outcome: working font rendering for arabic or devanagari or other script with "complex" rendering rules.</li>
 </ul>
 
-<!--
+<!-- Blocked for now, probably needs the above "complex font rendering" item completed first for most languages?
 <h4><img src="/images/App_Generic_32.png"/>
 RTL languages support in interface kit
 </h4>
